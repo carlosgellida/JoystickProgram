@@ -1,7 +1,9 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <MPU_personalized_functions.h>
+#include <Read_buttons.h> // El orden de invocación de liberías es indispensable
 #include <Wifi_personalized_functions.h>
+
 
 
 void setup() 

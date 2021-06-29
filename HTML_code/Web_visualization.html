@@ -1,21 +1,108 @@
 <html> 
     <style>
-        canvas {
+        #gamepad {
           width: 50%;
           height: 50%;
+          margin-top: 3vh;
+          margin-left: 1vw;
+          margin-bottom: 3vh;
+        }
+
+        #buttons {
+          width: 80%;
+          height: 80%;
+          margin-top: 3vh;
+          margin-left: 60vw;
+          margin-bottom: 3vh;
+        }
+
+        #gamepad_orientation{
+          color: red; 
+          font-size: 3vw;
+          display: flex; 
+          align-items: center;
+          justify-content: center;
+          width: 50vw;
+          margin-left: 1vw;
+        }
+
+        .redBorder{
+          border-style: solid;
+          border-color: red;
+          width: 53vw;
         }
     </style>
 
-<canvas id="d"></canvas>
+<div class="redBorder"> 
+<div id="gamepad_orientation"> 
+  Orientation of the gamepad
+</div>
+
+<canvas id="d"></canvas> <!-- Lienzo--> 
+<span id="gamepad"></span> <!-- gamepad--> 
+<span id="buttons"></span> <!-- Buttons--> 
+
+</div>
+
 
 <script type="module">
     import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
 
-    //import * as THREE from './resources/threejs/r127/build/three.module.js';
-function main() {
+function WebSocketBegin(gamepad, buttons) {
+  let [cube, renderer, scene, camera] = gamepad ; // Variables for visualization of gamepad orientation
+  let [cube2, renderer2, scene2, camera2] = buttons ; //Variables for visualization of buttons read
+
+  const ws = new WebSocket('ws://192.168.0.5:8080/');
+  console.log("Hello!")
+
+  ws.onopen = function() {
+   // Web Socket is connected
+  };
+
+  ws.onerror = function (error) {
+    console.log('WebSocket Error ' + error);
+  };
+
+  ws.onmessage = function(evt) {
+     //create a JSON object
+     var pi = 3.14159 ; 
+     var jsonObject = JSON.parse(evt.data);
+
+     //console.log(jsonObject.QW, jsonObject.QX, jsonObject.QY, jsonObject.QZ) ; 
+     //console.log(jsonObject.EulerX, jsonObject.EulerY, jsonObject.EulerZ); 
+     var quat1 = new THREE.Quaternion(jsonObject.QX, jsonObject.QY, jsonObject.QZ, jsonObject.QW);
+     const Euler_current = new THREE.Euler( jsonObject.EulerX*pi/180, jsonObject.EulerY*pi/180, jsonObject.EulerZ*pi/180, 'XYZ' );
+
+     var quat3 = new THREE.Quaternion(0.7068252, 0, 0, 0.7073883) ; // Rota 90 grados sobre x
+     var quat2 = new THREE.Quaternion( 0, 0, -0.3801884, 0.9249091) ; // Rota -45 grados sobre z
+
+            
+     quat1.multiplyQuaternions(quat2, quat1);  // Remplaza el cuaternio 4 con el resultado
+                                                      // del producto especial de quaternios
+     quat1.multiplyQuaternions(quat1, quat3);
+        
+      //quat1.setFromEuler(Euler_current); 
+            
+    cube.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
+    cube2.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
+            
+    renderer.render(scene, camera); // Renderizar gamepad visualization
+    renderer2.render(scene2, camera2); // Renderizar lectura de botones 
+  };
+        
+
+  ws.onclose = function() {
+    // websocket is closed.
+    alert("Connection is closed...");
+  }
+} 
+
+function gamepadOrientation() {
   const canvas = document.querySelector('#d'); // Debe coincidir con canvas id
+  //const buttons = document.querySelector('#e');
 
   const renderer = new THREE.WebGLRenderer({canvas});
+  //const renderer = new THREE.WebGLRenderer({buttons});
 
   const fov = 80;
   const aspect = 2;  // the canvas default
@@ -23,7 +110,7 @@ function main() {
   const far = 20;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   //camera.position.z = 10;
-  camera.position.x = 10 ; 
+  camera.position.x = 7 ; 
   camera.rotation.y = 3.14149/2 ; 
   camera.rotation.x = 3.14149/2 ; 
 
@@ -34,14 +121,14 @@ function main() {
   const radialSegment = 4 ; 
   const geometry = new THREE.ConeGeometry(radius, height, radialSegment);
 
-  renderer.setSize(window.innerWidth, window.innerHeight); //Increase the quality
+  renderer.setSize(0.5*window.innerWidth, 0.5*window.innerHeight); //Increase the quality
 
   const material = new THREE.MeshPhongMaterial({
   color: 0xFF0000,    // red (can also use a CSS color string here)
   flatShading: true,
   });
 
-   var pLight = new THREE.PointLight(0xffffff,0.8);
+  var pLight = new THREE.PointLight(0xffffff,0.8);
   //pLight.castShadow = true;
   pLight.position.set(2,5,2);
   scene.add(pLight);
@@ -63,57 +150,70 @@ function main() {
 
   const cube = new THREE.Mesh(geometry, material);
   scene.add(cube);
-
-    function WebSocketBegin() {
-          const ws = new WebSocket('ws://192.168.0.5:8080/');
-          console.log("Hello!")
-
-          ws.onopen = function() {
-            // Web Socket is connected
-          };
-
-          ws.onerror = function (error) {
-            console.log('WebSocket Error ' + error);
-          };
-
-          ws.onmessage = function(evt) {
-            //create a JSON object
-            var pi = 3.14159 ; 
-            var jsonObject = JSON.parse(evt.data);
-
-            //console.log(jsonObject.QW, jsonObject.QX, jsonObject.QY, jsonObject.QZ) ; 
-            //console.log(jsonObject.EulerX, jsonObject.EulerY, jsonObject.EulerZ); 
-            var quat1 = new THREE.Quaternion(jsonObject.QX, jsonObject.QY, jsonObject.QZ, jsonObject.QW);
-            const Euler_current = new THREE.Euler( jsonObject.EulerX*pi/180, jsonObject.EulerY*pi/180, jsonObject.EulerZ*pi/180, 'XYZ' );
-
-            var quat3 = new THREE.Quaternion(0.7068252, 0, 0, 0.7073883) ; // Rota 90 grados sobre x
-            var quat2 = new THREE.Quaternion( 0, 0, -0.3801884, 0.9249091) ; // Rota -45 grados sobre z
-
-            
-            quat1.multiplyQuaternions(quat2, quat1);  // Remplaza el cuaternio 4 con el resultado
-                                                      // del producto especial de quaternios
-            quat1.multiplyQuaternions(quat1, quat3);
-        
-            //quat1.setFromEuler(Euler_current); 
-            
-            cube.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
-            
-
-            renderer.render(scene, camera);
-          };
-        
-
-          ws.onclose = function() {
-            // websocket is closed.
-            alert("Connection is closed...");
-          }
-    } 
-
-  WebSocketBegin() ; 
-
+  return [cube, renderer, scene, camera]
 }
 
-main() ; 
+// Visualization of button readings
+function ButtonsReading() {
+  const canvasButton = document.querySelector('#d'); // Debe coincidir con canvas id
+
+  const renderer2 = new THREE.WebGLRenderer({canvasButton});
+
+  const fov = 80;
+  const aspect = 2;  // the canvas default
+  const near = 1;
+  const far = 20;
+  const camera2 = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  //camera.position.z = 10;
+  camera2.position.x = 7 ; 
+  camera2.rotation.y = 3.14149/2 ; 
+  camera2.rotation.x = 3.14149/2 ; 
+
+  const scene2 = new THREE.Scene();
+
+  const radius = 4;
+  const height = 4; 
+  const radialSegment = 4 ; 
+  const geometry = new THREE.ConeGeometry(radius, height, radialSegment);
+
+  renderer2.setSize(0.8*window.innerWidth, 0.8*window.innerHeight); //Increase the quality
+
+  const material = new THREE.MeshPhongMaterial({
+  color: 0xFF0000,    // red (can also use a CSS color string here)
+  flatShading: true,
+  });
+
+   var pLight = new THREE.PointLight(0xffffff,0.8);
+  //pLight.castShadow = true;
+  pLight.position.set(2,5,2);
+  scene2.add(pLight);
+
+  var pLight02 = new THREE.PointLight(0xefeeeee,0.8);
+  //pLight02.castShadow = true;
+  pLight02.position.set(-2,5,2);
+  scene2.add(pLight02);
+
+  var pLight03 = new THREE.PointLight(0xffffff,0.8);
+  //pLight03.castShadow = true;
+  pLight03.position.set(0,3,-3);
+  scene2.add(pLight03);   
+
+  const color = 0xFFFFFF;
+  const intensity = 0.5;
+  const light = new THREE.AmbientLight(color, intensity);
+  scene2.add(light);
+
+  const cube2 = new THREE.Mesh(geometry, material);
+  scene2.add(cube2);
+  return [cube2, renderer2, scene2, camera2]
+}
+
+let gamepad = gamepadOrientation() ;
+let buttonsdata = ButtonsReading() ; 
+
+//WebSocketBegin(cube, renderer, scene, camera) ; 
+WebSocketBegin(buttonsdata, gamepad) ; 
+
 </script>
 
 </html>

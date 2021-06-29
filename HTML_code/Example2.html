@@ -1,0 +1,257 @@
+<style> 
+#c {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: -1;
+}
+.diagram {
+  display: inline-block;
+  width:40vw;
+  height: 40vh;
+}
+.left {
+  float: left;
+  margin-right: .25em;
+}
+.right {
+  float: right;
+  margin-left: .25em;
+} */
+
+p{
+  margin-top: -1vh;
+}
+
+#workSpace{
+  width: 100vw;
+  height: 100vh;
+  margin-top: 0vh;
+  margin-left: 0vh;
+  /*background-color: cornflowerblue; */
+  display: grid;
+  grid-template-columns: 50vw 50vw;
+}
+
+.gamepad{
+  border-style: solid;
+  border-color: red;
+  width: 45vw;
+  height: 45vh ;
+  color: black; 
+  font-size: 2.5vw ;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0%; 
+}
+
+.autogiro{
+  border-style: solid;
+  border-color: blue;
+  width: 45vw;
+  height: 45vh ;
+  /*margin-left: 60vw; 
+  margin-top: 0vh ; */
+  color: black; 
+  font-size: 2.5vw ;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0%; 
+}
+</style>
+
+<canvas id="c"></canvas>
+
+<section id="workSpace">
+<div class="gamepad"> 
+  <p> Orientation of the gamepad </p>
+  <span id="box" class="diagram left"></span>
+</div>
+
+<div class="autogiro"> 
+  <p> Orientation of autogiro </p>
+  <span id="pyramid" class="diagram right"></span>
+</div>  
+
+<div class="autogiro"> </div>
+<div class="autogiro"> </div>
+
+</section>
+
+<script type="module">
+    import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
+
+function main() {
+  const canvas = document.querySelector('#c');
+  const renderer = new THREE.WebGLRenderer({canvas, alpha: true});
+
+  function makeScene(elem) {
+    const scene = new THREE.Scene();
+
+    const fov = 45;
+    const aspect = 2;  // the canvas default
+    const near = 0.1;
+    const far = 5;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(0, 1, 2);
+    camera.lookAt(0, 0, 0);
+
+    {
+      const color = 0xFFFFFF;
+      const intensity = 1;
+      const light = new THREE.DirectionalLight(color, intensity);
+      light.position.set(-1, 2, 4);
+      scene.add(light);
+    }
+
+    return {scene, camera, elem};
+  }
+
+  function setupScene1() {
+    const sceneInfo = makeScene(document.querySelector('#box'));
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshPhongMaterial({color: 'red'});
+    const mesh = new THREE.Mesh(geometry, material);
+    sceneInfo.scene.add(mesh);
+    sceneInfo.mesh = mesh;
+    return sceneInfo;
+  }
+
+  function setupScene2() {
+    const sceneInfo = makeScene(document.querySelector('#pyramid'));
+    const radius = .8;
+    const widthSegments = 4;
+    const heightSegments = 2;
+    const geometry = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
+    const material = new THREE.MeshPhongMaterial({
+      color: 'blue',
+      flatShading: true,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    sceneInfo.scene.add(mesh);
+    sceneInfo.mesh = mesh;
+    return sceneInfo;
+  }
+
+  const sceneInfo1 = setupScene1();
+  const sceneInfo2 = setupScene2();
+
+  function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+      renderer.setSize(width, height, false);
+    }
+    return needResize;
+  }
+
+  function renderSceneInfo(sceneInfo) {
+    const {scene, camera, elem} = sceneInfo;
+
+    // get the viewport relative position of this element
+    const {left, right, top, bottom, width, height} =
+        elem.getBoundingClientRect();
+
+    const isOffscreen =
+        bottom < 0 ||
+        top > renderer.domElement.clientHeight ||
+        right < 0 ||
+        left > renderer.domElement.clientWidth;
+
+    if (isOffscreen) {
+      return;
+    }
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+
+    const positiveYUpBottom = renderer.domElement.clientHeight - bottom;
+    renderer.setScissor(left, positiveYUpBottom, width, height);
+    renderer.setViewport(left, positiveYUpBottom, width, height);
+
+    renderer.render(scene, camera);
+  }
+
+  function render(time) {
+    //time *= 0.001;
+
+    resizeRendererToDisplaySize(renderer);
+
+    renderer.setScissorTest(false);
+    renderer.clear(true, true);
+    renderer.setScissorTest(true);
+
+    //sceneInfo1.mesh.rotation.y = time * .1;
+    //sceneInfo2.mesh.rotation.y = time * .1;
+
+    renderSceneInfo(sceneInfo1);
+    renderSceneInfo(sceneInfo2);
+
+    requestAnimationFrame(render);
+  }
+
+  function WebSocketBegin() {
+   //let [scene, camera, cube] = [gamepad.scene, gamepad.camera, gamepad.mesh]; // Variables for visualization of gamepad orientation
+   //let [scene2, camera2, cube2] = [buttons.scene, buttons.camera, buttons.mesh] ; //Variables for visualization of buttons read
+
+   const ws = new WebSocket('ws://192.168.0.5:8080/');
+   console.log("Hello!");
+
+    ws.onopen = function() {
+    // Web Socket is connected
+   };
+
+   ws.onerror = function (error) {
+     console.log('WebSocket Error ' + error);
+   };
+
+   ws.onmessage = function(evt) {
+      //create a JSON object
+       var pi = 3.14159 ; 
+       var jsonObject = JSON.parse(evt.data);
+
+      //console.log(jsonObject.QW, jsonObject.QX, jsonObject.QY, jsonObject.QZ) ; 
+      //console.log(jsonObject.EulerX, jsonObject.EulerY, jsonObject.EulerZ); 
+       let quat1 = new THREE.Quaternion(jsonObject.QX, jsonObject.QY, jsonObject.QZ, jsonObject.QW);
+       const Euler_current = new THREE.Euler( jsonObject.EulerX*pi/180, jsonObject.EulerY*pi/180, jsonObject.EulerZ*pi/180, 'XYZ' );
+
+       var quat3 = new THREE.Quaternion(0.7068252, 0, 0, 0.7073883) ; // Rota 90 grados sobre x
+       var quat2 = new THREE.Quaternion( 0, 0, -0.3801884, 0.9249091) ; // Rota -45 grados sobre z
+
+            
+      quat1.multiplyQuaternions(quat2, quat1);  // Remplaza el cuaternio 4 con el resultado
+                                                      // del producto especial de quaternios
+      quat1.multiplyQuaternions(quat1, quat3);
+        
+       //quat1.setFromEuler(Euler_current); 
+            
+      sceneInfo1.mesh.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
+      sceneInfo2.mesh.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
+
+      renderSceneInfo(sceneInfo1, renderer);
+      renderSceneInfo(sceneInfo2, renderer);
+    };
+        
+
+    ws.onclose = function() {
+     // websocket is closed.
+      alert("Connection is closed...");
+   }
+  }
+
+  requestAnimationFrame(render);
+  WebSocketBegin() ; 
+}
+
+main();
+    </script>
+  
