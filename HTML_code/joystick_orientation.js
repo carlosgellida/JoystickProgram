@@ -1,15 +1,4 @@
-<html> 
-    <style>
-        canvas {
-          width: 50%;
-          height: 50%;
-        }
-    </style>
-
-<canvas id="d"></canvas>
-
-<script type="module">
-    import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
+import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
 
     //import * as THREE from './resources/threejs/r127/build/three.module.js';
 function main() {
@@ -82,7 +71,7 @@ function main() {
             var jsonObject = JSON.parse(evt.data);
 
             //console.log(jsonObject.QW, jsonObject.QX, jsonObject.QY, jsonObject.QZ) ; 
-            //console.log(jsonObject.EulerX, jsonObject.EulerY, jsonObject.EulerZ); 
+            console.log(jsonObject.EulerX, jsonObject.EulerY, jsonObject.EulerZ); 
             var quat1 = new THREE.Quaternion(jsonObject.QX, jsonObject.QY, jsonObject.QZ, jsonObject.QW);
             const Euler_current = new THREE.Euler( jsonObject.EulerX*pi/180, jsonObject.EulerY*pi/180, jsonObject.EulerZ*pi/180, 'XYZ' );
 
@@ -114,6 +103,3 @@ function main() {
 }
 
 main() ; 
-</script>
-
-</html>
