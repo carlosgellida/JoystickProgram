@@ -1,219 +1,312 @@
-<html> 
-    <style>
-        #gamepad {
-          width: 50%;
-          height: 50%;
-          margin-top: 3vh;
-          margin-left: 1vw;
-          margin-bottom: 3vh;
-        }
-
-        #buttons {
-          width: 80%;
-          height: 80%;
-          margin-top: 3vh;
-          margin-left: 60vw;
-          margin-bottom: 3vh;
-        }
-
-        #gamepad_orientation{
-          color: red; 
-          font-size: 3vw;
-          display: flex; 
-          align-items: center;
-          justify-content: center;
-          width: 50vw;
-          margin-left: 1vw;
-        }
-
-        .redBorder{
-          border-style: solid;
-          border-color: red;
-          width: 53vw;
-        }
-    </style>
-
-<div class="redBorder"> 
-<div id="gamepad_orientation"> 
-  Orientation of the gamepad
-</div>
-
-<canvas id="d"></canvas> <!-- Lienzo--> 
-<span id="gamepad"></span> <!-- gamepad--> 
-<span id="buttons"></span> <!-- Buttons--> 
-
-</div>
-
-
-<script type="module">
-    import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
-
-function WebSocketBegin(gamepad, buttons) {
-  let [cube, renderer, scene, camera] = gamepad ; // Variables for visualization of gamepad orientation
-  let [cube2, renderer2, scene2, camera2] = buttons ; //Variables for visualization of buttons read
-
-  const ws = new WebSocket('ws://192.168.0.5:8080/');
-  console.log("Hello!")
-
-  ws.onopen = function() {
-   // Web Socket is connected
-  };
-
-  ws.onerror = function (error) {
-    console.log('WebSocket Error ' + error);
-  };
-
-  ws.onmessage = function(evt) {
-     //create a JSON object
-     var pi = 3.14159 ; 
-     var jsonObject = JSON.parse(evt.data);
-
-     //console.log(jsonObject.QW, jsonObject.QX, jsonObject.QY, jsonObject.QZ) ; 
-     //console.log(jsonObject.EulerX, jsonObject.EulerY, jsonObject.EulerZ); 
-     var quat1 = new THREE.Quaternion(jsonObject.QX, jsonObject.QY, jsonObject.QZ, jsonObject.QW);
-     const Euler_current = new THREE.Euler( jsonObject.EulerX*pi/180, jsonObject.EulerY*pi/180, jsonObject.EulerZ*pi/180, 'XYZ' );
-
-     var quat3 = new THREE.Quaternion(0.7068252, 0, 0, 0.7073883) ; // Rota 90 grados sobre x
-     var quat2 = new THREE.Quaternion( 0, 0, -0.3801884, 0.9249091) ; // Rota -45 grados sobre z
-
-            
-     quat1.multiplyQuaternions(quat2, quat1);  // Remplaza el cuaternio 4 con el resultado
-                                                      // del producto especial de quaternios
-     quat1.multiplyQuaternions(quat1, quat3);
-        
-      //quat1.setFromEuler(Euler_current); 
-            
-    cube.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
-    cube2.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
-            
-    renderer.render(scene, camera); // Renderizar gamepad visualization
-    renderer2.render(scene2, camera2); // Renderizar lectura de botones 
-  };
-        
-
-  ws.onclose = function() {
-    // websocket is closed.
-    alert("Connection is closed...");
+<style> 
+  #c {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: -1;
   }
-} 
+  .diagram {
+    display: inline-block;
+    width:40vw;
+    height: 40vh;
+  }
 
-function gamepadOrientation() {
-  const canvas = document.querySelector('#d'); // Debe coincidir con canvas id
-  //const buttons = document.querySelector('#e');
+  .fondoGamepad {
+    display: inline-block;
+    width:70vw;
+    height: 70vh;
+  }
 
-  const renderer = new THREE.WebGLRenderer({canvas});
-  //const renderer = new THREE.WebGLRenderer({buttons});
+  .left {
+    float: left;
+    margin-right: .25em;
+  }
+  .right {
+    float: right;
+    margin-left: .25em;
+  } */
+  
+  p{
+    margin-top: -1vh;
+  }
+  
+  #workSpace{
+    width: 100vw;
+    height: 100vh;
+    margin-top: 0vh;
+    margin-left: 0vh;
+    /*background-color: cornflowerblue; */
+    display: grid;
+    grid-template-columns: 50vw 50vw;
+  }
+  
+  .gamepad{
+    border-style: solid;
+    border-color: red;
+    width: 45vw;
+    height: 45vh ;
+    color: black; 
+    font-size: 2.5vw ;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0%; 
+  }
+  
+  .autogiro{
+    border-style: solid;
+    border-color: blue;
+    width: 45vw;
+    height: 45vh ;
+    /*margin-left: 60vw; 
+    margin-top: 0vh ; */
+    color: black; 
+    font-size: 2.5vw ;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0%; 
+  }
+  </style>
+  
+  <canvas id="c"></canvas>
+  
+  <section id="workSpace">
+  <div class="gamepad"> 
+    <p> Orientation of the gamepad </p>
+    <span id="box" class="diagram left"></span>
+  </div>
+  
+  <div class="autogiro"> 
+    <p> Orientation of autogiro </p>
+    <span id="pyramid" class="diagram right"></span>
+  </div>  
+  
+  <div class="autogiro"> 
+    <p> Gamepad buttons position </p>
+    <span id="buttons" class="right fondoGamepad"></span>
+  </div>
 
-  const fov = 80;
-  const aspect = 2;  // the canvas default
-  const near = 1;
-  const far = 20;
-  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  //camera.position.z = 10;
-  camera.position.x = 7 ; 
-  camera.rotation.y = 3.14149/2 ; 
-  camera.rotation.x = 3.14149/2 ; 
+  <div class="autogiro"> </div>
+  
+  </section>
+  
+  <script type="module">
+      import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
+  
+  function main() {
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({canvas, alpha: true});
+  
+    function makeScene(elem) {
+      const scene = new THREE.Scene();
+  
+      const fov = 45;
+      const aspect = 2;  // the canvas default
+      const near = 0.2;
+      const far = 5;
+      const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+      camera.position.set(0, 0, 2);
+      camera.lookAt(0, 0, 0);
+  
+      {
+        const color = 0xFFFFFF;
+        const intensity = 1;
+        const light = new THREE.DirectionalLight(color, intensity);
+        light.position.set(-1, 2, 4);
+        scene.add(light);
+      }
+  
+      return {scene, camera, elem};
+    }
+  
+    function setupScene1() {
+      // Gamepad scene
+      const sceneInfo = makeScene(document.querySelector('#box'));
+      const geometry = new THREE.BoxGeometry(1, 0.1, 2);
+      const material = new THREE.MeshPhongMaterial({color: 'black'});
+      const mesh = new THREE.Mesh(geometry, material);
+      sceneInfo.scene.add(mesh);
+      sceneInfo.mesh = mesh;
+      return sceneInfo;
+    }
+  
+    function setupScene2() {
+      // Autogiro scene
+      const sceneInfo = makeScene(document.querySelector('#pyramid'));
+      const radius = .8;
+      const widthSegments = 4;
+      const heightSegments = 2;
+      const geometry = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
+      const material = new THREE.MeshPhongMaterial({
+        color: 'blue',
+        flatShading: true,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      sceneInfo.scene.add(mesh);
+      sceneInfo.mesh = mesh;
+      return sceneInfo;
+    }
 
-  const scene = new THREE.Scene();
+    function setupScene3() {
+      // Gamepad scene
+      const sceneInfo = makeScene(document.querySelector('#buttons'));
+      const geometry = new THREE.BoxGeometry(3, 1.5, 0.1);
+      const material = new THREE.MeshPhongMaterial({color: 'green'});
+      const fondoVerde = new THREE.Mesh(geometry, material);
+      sceneInfo.scene.add(fondoVerde);
+      sceneInfo.fondoVerde = fondoVerde;
 
-  const radius = 4;
-  const height = 4; 
-  const radialSegment = 4 ; 
-  const geometry = new THREE.ConeGeometry(radius, height, radialSegment);
+      const geometry2 = new THREE.CircleGeometry(0.5, 50); 
+      const material2 = new THREE.MeshPhongMaterial({color: 'black'}); 
+      const fondoJoy = new THREE.Mesh(geometry2, material2); 
+      var vec = new THREE.Vector3(0.7, 0, 0.2);
+      fondoJoy.position.copy(vec); 
+      const fondoJoy2 = new THREE.Mesh(geometry2, material2); 
+      var vec2 = new THREE.Vector3(-0.7, 0, 0.2);
+      fondoJoy2.position.copy(vec2); 
+      sceneInfo.scene.add(fondoJoy); 
+      sceneInfo.scene.add(fondoJoy2); 
+      sceneInfo.fondoJoy = fondoJoy ; 
+      sceneInfo.fondoJoy = fondoJoy2 ; 
 
-  renderer.setSize(0.5*window.innerWidth, 0.5*window.innerHeight); //Increase the quality
+      const geometry3 = new THREE.CircleGeometry(0.1, 50); 
+      const material3 = new THREE.MeshPhongMaterial({color: 'red'}); 
+      const buttonL = new THREE.Mesh(geometry3, material3); 
+      var vec3 = new THREE.Vector3(-0.7, 0, 0.21);
+      buttonL.position.copy(vec3); 
+      const buttonR = new THREE.Mesh(geometry3, material3); 
+      var vec4 = new THREE.Vector3(0.7, 0, 0.21);
+      buttonR.position.copy(vec4); 
+      sceneInfo.scene.add(buttonL); 
+      sceneInfo.scene.add(buttonR); 
+      sceneInfo.buttonL = buttonL ; 
+      sceneInfo.buttonR = buttonR ; 
 
-  const material = new THREE.MeshPhongMaterial({
-  color: 0xFF0000,    // red (can also use a CSS color string here)
-  flatShading: true,
-  });
+      return sceneInfo;
+    }
+  
+    const sceneInfo1 = setupScene1();
+    const sceneInfo2 = setupScene2();
+    const sceneInfo3 = setupScene3();
+  
+    function resizeRendererToDisplaySize(renderer) {
+      const canvas = renderer.domElement;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const needResize = canvas.width !== width || canvas.height !== height;
+      if (needResize) {
+        renderer.setSize(width, height, false);
+      }
+      return needResize;
+    }
+  
+    function renderSceneInfo(sceneInfo) {
+      const {scene, camera, elem} = sceneInfo;
+  
+      // get the viewport relative position of this element
+      const {left, right, top, bottom, width, height} =
+          elem.getBoundingClientRect();
+  
+      const isOffscreen =
+          bottom < 0 ||
+          top > renderer.domElement.clientHeight ||
+          right < 0 ||
+          left > renderer.domElement.clientWidth;
+  
+      if (isOffscreen) {
+        return;
+      }
+  
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+  
+      const positiveYUpBottom = renderer.domElement.clientHeight - bottom;
+      renderer.setScissor(left, positiveYUpBottom, width, height);
+      renderer.setViewport(left, positiveYUpBottom, width, height);
+  
+      renderer.render(scene, camera);
+    }
+  
+    function render(time) {
 
-  var pLight = new THREE.PointLight(0xffffff,0.8);
-  //pLight.castShadow = true;
-  pLight.position.set(2,5,2);
-  scene.add(pLight);
-
-  var pLight02 = new THREE.PointLight(0xefeeeee,0.8);
-  //pLight02.castShadow = true;
-  pLight02.position.set(-2,5,2);
-  scene.add(pLight02);
-
-  var pLight03 = new THREE.PointLight(0xffffff,0.8);
-  //pLight03.castShadow = true;
-  pLight03.position.set(0,3,-3);
-  scene.add(pLight03);   
-
-  const color = 0xFFFFFF;
-  const intensity = 0.5;
-  const light = new THREE.AmbientLight(color, intensity);
-  scene.add(light);
-
-  const cube = new THREE.Mesh(geometry, material);
-  scene.add(cube);
-  return [cube, renderer, scene, camera]
-}
-
-// Visualization of button readings
-function ButtonsReading() {
-  const canvasButton = document.querySelector('#d'); // Debe coincidir con canvas id
-
-  const renderer2 = new THREE.WebGLRenderer({canvasButton});
-
-  const fov = 80;
-  const aspect = 2;  // the canvas default
-  const near = 1;
-  const far = 20;
-  const camera2 = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  //camera.position.z = 10;
-  camera2.position.x = 7 ; 
-  camera2.rotation.y = 3.14149/2 ; 
-  camera2.rotation.x = 3.14149/2 ; 
-
-  const scene2 = new THREE.Scene();
-
-  const radius = 4;
-  const height = 4; 
-  const radialSegment = 4 ; 
-  const geometry = new THREE.ConeGeometry(radius, height, radialSegment);
-
-  renderer2.setSize(0.8*window.innerWidth, 0.8*window.innerHeight); //Increase the quality
-
-  const material = new THREE.MeshPhongMaterial({
-  color: 0xFF0000,    // red (can also use a CSS color string here)
-  flatShading: true,
-  });
-
-   var pLight = new THREE.PointLight(0xffffff,0.8);
-  //pLight.castShadow = true;
-  pLight.position.set(2,5,2);
-  scene2.add(pLight);
-
-  var pLight02 = new THREE.PointLight(0xefeeeee,0.8);
-  //pLight02.castShadow = true;
-  pLight02.position.set(-2,5,2);
-  scene2.add(pLight02);
-
-  var pLight03 = new THREE.PointLight(0xffffff,0.8);
-  //pLight03.castShadow = true;
-  pLight03.position.set(0,3,-3);
-  scene2.add(pLight03);   
-
-  const color = 0xFFFFFF;
-  const intensity = 0.5;
-  const light = new THREE.AmbientLight(color, intensity);
-  scene2.add(light);
-
-  const cube2 = new THREE.Mesh(geometry, material);
-  scene2.add(cube2);
-  return [cube2, renderer2, scene2, camera2]
-}
-
-let gamepad = gamepadOrientation() ;
-let buttonsdata = ButtonsReading() ; 
-
-//WebSocketBegin(cube, renderer, scene, camera) ; 
-WebSocketBegin(buttonsdata, gamepad) ; 
-
-</script>
-
-</html>
+      resizeRendererToDisplaySize(renderer);
+  
+      renderer.setScissorTest(false);
+      renderer.clear(true, true);
+      renderer.setScissorTest(true);
+  
+      renderSceneInfo(sceneInfo1);
+      renderSceneInfo(sceneInfo2);
+      renderSceneInfo(sceneInfo3);
+  
+      requestAnimationFrame(render);
+    }
+  
+    function WebSocketBegin() {
+     //let [scene, camera, cube] = [gamepad.scene, gamepad.camera, gamepad.mesh]; // Variables for visualization of gamepad orientation
+     //let [scene2, camera2, cube2] = [buttons.scene, buttons.camera, buttons.mesh] ; //Variables for visualization of buttons read
+  
+     const ws = new WebSocket('ws://192.168.0.5:8080/');
+     console.log("Hello!");
+  
+      ws.onopen = function() {
+      // Web Socket is connected
+     };
+  
+     ws.onerror = function (error) {
+       console.log('WebSocket Error ' + error);
+     };
+  
+     ws.onmessage = function(evt) {
+        //create a JSON object
+         var pi = 3.14159 ; 
+         var jsonObject = JSON.parse(evt.data);
+  
+        //console.log(jsonObject.QW, jsonObject.QX, jsonObject.QY, jsonObject.QZ) ; 
+        //console.log(jsonObject.EulerX, jsonObject.EulerY, jsonObject.EulerZ); 
+         let quat1 = new THREE.Quaternion(jsonObject.QX, jsonObject.QY, jsonObject.QZ, jsonObject.QW);
+         const Euler_current = new THREE.Euler( jsonObject.EulerX*pi/180, jsonObject.EulerY*pi/180, jsonObject.EulerZ*pi/180, 'XYZ' );
+  
+         var quat3 = new THREE.Quaternion(0.7068252, 0, 0, 0.7073883) ; // Rota 90 grados sobre x
+         var quat2 = new THREE.Quaternion( 0, 0, -0.3801884, 0.9249091) ; // Rota -45 grados sobre z
+  
+         quat1.multiplyQuaternions(quat2, quat1);  // Remplaza el cuaternio 4 con el resultado
+                                                        // del producto especial de quaternios
+         quat1.multiplyQuaternions(quat1, quat3);
+          
+         //quat1.setFromEuler(Euler_current); 
+              
+        sceneInfo1.mesh.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
+        sceneInfo2.mesh.quaternion.copy(quat1) ; // Mover cube deacuerdo con quat1
+        
+        var vecJoyR = new THREE.Vector3(0.7+jsonObject.Ry/8, jsonObject.Rx/8, 0.21+0*jsonObject.Rw);
+        sceneInfo3.buttonR.position.copy(vecJoyR); 
+        if(jsonObject.Lw > 0.32){
+          var vecJoyL = new THREE.Vector3(-0.7+jsonObject.Ly/8, jsonObject.Lx/8, 0.21) ;
+        }else{
+          var vecJoyL = new THREE.Vector3(-0.7+jsonObject.Ly/8, jsonObject.Lx/8, 0.4) ;
+        }
+        
+        sceneInfo3.buttonL.position.copy(vecJoyL);
+        console.log(vecJoyL) ; 
+      };
+          
+  
+      ws.onclose = function() {
+       // websocket is closed.
+        alert("Connection is closed...");
+     }
+    }
+  
+    requestAnimationFrame(render);
+    WebSocketBegin() ; 
+  }
+  
+  main();
+      </script>
